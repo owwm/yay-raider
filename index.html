@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Yay! Raider System</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+        .box { background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155; }
+        h1 { font-size: 20px; color: #3b82f6; margin-top: 0; }
+        label { display: block; margin-top: 15px; font-size: 13px; color: #94a3b8; }
+        textarea, input { width: 100%; background: #020617; border: 1px solid #334155; color: white; padding: 10px; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }
+        button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; margin-top: 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        #log { background: black; color: #4ade80; padding: 10px; height: 150px; overflow-y: scroll; font-family: monospace; font-size: 12px; margin-top: 20px; border-radius: 5px; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Yay! Raider System</h1>
+    
+    <label>Yay! トークン (改行区切りで複数入力可能)</label>
+    <textarea id="tokens" rows="5" placeholder="Bearer c95f..."></textarea>
+
+    <label>サークルID</label>
+    <input type="text" id="groupId" value="408065">
+
+    <label>メッセージ内容</label>
+    <textarea id="message" rows="2">acvr on top!! https://discord.gg/acvr join now</textarea>
+
+    <button id="runBtn">Raiding Start</button>
+
+    <div id="log">>> 待機中...</div>
+</div>
+
+<script>
+    const PROXY_URL = "https://delicate-bird-b01b.dafese.workers.dev/";
+    const logEl = document.getElementById('log');
+
+    function addLog(text) {
+        const div = document.createElement('div');
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    document.getElementById('runBtn').onclick = async () => {
+        const tokens = document.getElementById('tokens').value.split('\n').filter(t => t.trim());
+        const gid = document.getElementById('groupId').value;
+        const msg = document.getElementById('message').value;
+
+        if (!tokens.length) return alert("トークンを入力してください");
+
+        addLog("🚀 プロセスを開始しました...");
+
+        for (const token of tokens) {
+            const cleanToken = token.replace('Bearer ', '').trim();
+            addLog(`📡 送信中: ${cleanToken.substring(0, 10)}...`);
+
+            try {
+                const res = await fetch(PROXY_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${cleanToken}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "post_type": "shareable_url",
+                        "text": msg,
+                        "group_id": gid,
+                        "uuid": crypto.randomUUID()
+                    })
+                });
+
+                if (res.ok) {
+                    addLog("✅ 成功！");
+                } else {
+                    const err = await res.text();
+                    addLog(`❌ 失敗 (${res.status})`);
+                }
+            } catch (e) {
+                addLog("⚠️ プロキシ通信エラー");
+            }
+            // 3秒待機（連投規制対策）
+            await new Promise(r => setTimeout(r, 3000));
+        }
+        addLog("🏁 すべてのトークンでの送信が完了しました");
+    };
+</script>
+
+</body>
+</html>
